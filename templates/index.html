@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISL RAG Translator Demo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .main-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        .header {
+            background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border-radius: 20px 20px 0 0;
+            padding: 2rem;
+            text-align: center;
+        }
+        .search-box {
+            border: none;
+            border-radius: 25px;
+            padding: 15px 25px;
+            font-size: 1.1rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        .search-box:focus {
+            box-shadow: 0 5px 25px rgba(79, 172, 254, 0.3);
+            border: none;
+        }
+        .btn-search {
+            background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+            border: none;
+            border-radius: 25px;
+            padding: 15px 30px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        .btn-search:hover {
+            transform: translateY(-2px);
+        }
+        .btn-microphone {
+            background: linear-gradient(45deg, #28a745 0%, #20c997 100%);
+            border: none;
+            border-radius: 25px;
+            padding: 15px 20px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        .btn-microphone:hover {
+            transform: translateY(-2px);
+        }
+        .btn-microphone.listening {
+            background: linear-gradient(45deg, #dc3545 0%, #fd7e14 100%);
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .speech-status {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .speech-status.listening {
+            color: #dc3545;
+        }
+        .speech-status.success {
+            color: #28a745;
+        }
+        .speech-status.error {
+            color: #dc3545;
+        }
+        .playlist-container {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+        .playlist-info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 10px;
+            padding: 1rem;
+            color: #0c5460;
+        }
+        .playlist-item {
+            transition: all 0.3s ease;
+        }
+        .playlist-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 123, 255, 0.9);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .playlist-navigation {
+            background: white;
+            border-radius: 10px;
+            padding: 1rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .video-display {
+            background: #000;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            position: relative;
+            margin: 2rem 0;
+        }
+        .video-container {
+            position: relative;
+            background: #000;
+            border-radius: 20px;
+            overflow: hidden;
+            width: 100%;
+            height: 60vh;
+            min-height: 400px;
+        }
+        .video-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .video-caption {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+            color: white;
+            padding: 2rem 1.5rem 1.5rem;
+            font-size: 1.5rem;
+            font-weight: 600;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+        .video-controls {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+        }
+        .play-button {
+            background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .play-button:hover {
+            transform: scale(1.1);
+        }
+        .video-status {
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        .progress-indicator {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 1rem;
+            color: white;
+        }
+        .similarity-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(79, 172, 254, 0.9);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .loading {
+            display: none;
+        }
+        .spinner-border {
+            color: #4facfe;
+        }
+        .no-results {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+        .example-queries {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+        .example-query {
+            cursor: pointer;
+            padding: 8px 15px;
+            margin: 5px;
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 20px;
+            transition: all 0.2s;
+            display: inline-block;
+        }
+        .example-query:hover {
+            border-color: #4facfe;
+            background: #4facfe;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="main-container">
+                    <!-- Header -->
+                    <div class="header">
+                        <h1><i class="fas fa-hands"></i> ISL RAG Translator Demo</h1>
+                        <p class="mb-0">Convert spoken text to Indian Sign Language videos using AI</p>
+                    </div>
+                    
+                    <!-- Search Section -->
+                    <div class="p-4">
+                        <div class="row">
+                            <div class="col-md-7">
+                                <input type="text" 
+                                       class="form-control search-box" 
+                                       id="queryInput" 
+                                       placeholder="Enter text or speak to translate to sign language..."
+                                       onkeypress="handleKeyPress(event)">
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-success btn-microphone w-100" id="micButton" onclick="toggleSpeechRecognition()">
+                                    <i class="fas fa-microphone"></i> Voice
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-primary btn-search w-100" onclick="searchVideos()">
+                                    <i class="fas fa-search"></i> Search Videos
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Speech Status Indicator -->
+                        <div class="speech-status" id="speechStatus" style="display: none;">
+                            <i class="fas fa-microphone"></i> <span id="speechStatusText">Ready to listen</span>
+                        </div>
+                        
+                        <!-- Loading Indicator -->
+                        <div class="loading text-center mt-3">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Searching for relevant videos...</p>
+                        </div>
+                        
+                        <!-- Example Queries -->
+                        <div class="example-queries">
+                            <h6><i class="fas fa-lightbulb"></i> Try these examples (click or speak):</h6>
+                            <div class="example-query" onclick="setQuery('how are you')">How are you?</div>
+                            <div class="example-query" onclick="setQuery('good morning')">Good morning</div>
+                            <div class="example-query" onclick="setQuery('hello')">Hello</div>
+                            <div class="example-query" onclick="setQuery('see you tomorrow')">See you tomorrow</div>
+                            <div class="example-query" onclick="setQuery('I am fine')">I am fine</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Results Section -->
+                    <div class="px-4 pb-4">
+                        <div id="resultsContainer"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function setQuery(text) {
+            document.getElementById('queryInput').value = text;
+            searchVideos();
+        }
+        
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                searchVideos();
+            }
+        }
+        
+        async function searchVideos() {
+            const query = document.getElementById('queryInput').value.trim();
+            if (!query) {
+                alert('Please enter a search query');
+                return;
+            }
+            
+            const loading = document.querySelector('.loading');
+            const resultsContainer = document.getElementById('resultsContainer');
+            
+            // Show loading
+            loading.style.display = 'block';
+            resultsContainer.innerHTML = '';
+            
+            try {
+                const response = await fetch('/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: query })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayResults(data.results, query, data.is_compound);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error searching videos: ' + error.message);
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+        
+        let currentVideo = null;
+        let loopCount = 0;
+        let maxLoops = 3;
+        let isPlaying = false;
+        
+        // Speech Recognition variables
+        let recognition = null;
+        let isListening = false;
+
+        function displayResults(results, query, isCompound = false) {
+            const resultsContainer = document.getElementById('resultsContainer');
+            
+            if (results.length === 0) {
+                resultsContainer.innerHTML = `
+                    <div class="no-results">
+                        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                        <h5>No videos found</h5>
+                        <p>Try a different search term or check if the database is properly set up.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            if (isCompound && results.length > 1) {
+                // Display multiple videos for compound phrases
+                displayMultipleVideos(results, query);
+            } else {
+                // Display single video for simple phrases
+                displaySingleVideo(results[0], query);
+            }
+        }
+        
+        function displaySingleVideo(result, query) {
+            const resultsContainer = document.getElementById('resultsContainer');
+            const videoUrl = `/videos/${result.filename}`;
+            const similarityPercent = Math.round(result.similarity * 100);
+            
+            let html = `
+                <h4 class="mb-4 text-center">
+                    <i class="fas fa-video"></i> Best Match for "${query}"
+                    <span class="badge bg-success ms-2">${similarityPercent}% match</span>
+                </h4>
+                
+                <div class="video-display">
+                    <div class="video-container">
+                        <video id="mainVideo" preload="auto" muted>
+                            <source src="${videoUrl}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                        <div class="video-caption">
+                            <i class="fas fa-closed-captioning"></i> "${result.text}"
+                        </div>
+                        <div class="similarity-badge">
+                            ${similarityPercent}% match
+                        </div>
+                    </div>
+                    <div class="video-controls">
+                        <button class="play-button" id="playButton" onclick="togglePlay()">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        <div class="video-status">
+                            <i class="fas fa-play"></i> <span id="videoStatus">Playing</span>
+                        </div>
+                        <button class="btn btn-outline-light btn-sm" onclick="speakText('${result.text}')">
+                            <i class="fas fa-volume-up"></i> Speak Text
+                        </button>
+                        <button class="btn btn-outline-light btn-sm" onclick="copyText('${result.text}')">
+                            <i class="fas fa-copy"></i> Copy Text
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-3">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle"></i> Video will auto-play for better learning
+                    </small>
+                </div>
+            `;
+            
+            resultsContainer.innerHTML = html;
+            
+            // Setup video event listeners
+            setupVideoEvents();
+            
+            // Auto-play the video
+            setTimeout(() => {
+                startAutoPlay();
+            }, 500);
+        }
+        
+        function displayMultipleVideos(results, query) {
+            const resultsContainer = document.getElementById('resultsContainer');
+            
+            let html = `
+                <h4 class="mb-4 text-center">
+                    <i class="fas fa-video"></i> Video Playlist for "${query}"
+                    <span class="badge bg-primary ms-2">${results.length} videos found</span>
+                </h4>
+                
+                <div class="playlist-container">
+                    <div class="playlist-info mb-3">
+                        <i class="fas fa-info-circle"></i> 
+                        <strong>Compound phrase detected!</strong> 
+                        Playing ${results.length} videos in sequence as one continuous conversation.
+                    </div>
+                    
+                    <div class="video-playlist" id="videoPlaylist">
+            `;
+            
+            results.forEach((result, index) => {
+                const videoUrl = `/videos/${result.filename}`;
+                const similarityPercent = Math.round(result.similarity * 100);
+                const matchType = result.match_type || 'semantic';
+                
+                html += `
+                    <div class="playlist-item" data-index="${index}" style="display: ${index === 0 ? 'block' : 'none'};">
+                        <div class="video-display">
+                            <div class="video-container">
+                                <video id="mainVideo" preload="auto" muted>
+                                    <source src="${videoUrl}" type="video/mp4">
+                                    Your browser does not support the video tag.
+                                </video>
+                                <div class="video-caption">
+                                    <i class="fas fa-closed-captioning"></i> "${result.text}"
+                                </div>
+                                <div class="similarity-badge">
+                                    ${similarityPercent}% match
+                                </div>
+                                <div class="playlist-badge">
+                                    Video ${index + 1} of ${results.length}
+                                </div>
+                            </div>
+                            <div class="video-controls">
+                                <button class="play-button" id="playButton" onclick="togglePlay()">
+                                    <i class="fas fa-play"></i>
+                                </button>
+                        <div class="video-status">
+                            <i class="fas fa-play"></i> <span id="videoStatus">Playing</span>
+                        </div>
+                                <button class="btn btn-outline-light btn-sm" onclick="speakText('${result.text}')">
+                                    <i class="fas fa-volume-up"></i> Speak Text
+                                </button>
+                                <button class="btn btn-outline-light btn-sm" onclick="copyText('${result.text}')">
+                                    <i class="fas fa-copy"></i> Copy Text
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                    </div>
+                    
+                    <div class="playlist-navigation text-center mt-3">
+                        <div class="progress-indicator">
+                            <i class="fas fa-play-circle"></i>
+                            <span class="mx-3">
+                                <span id="currentVideo">1</span> of <span id="totalVideos">${results.length}</span>
+                            </span>
+                            <small class="text-muted">Auto-playing as continuous conversation</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            resultsContainer.innerHTML = html;
+            
+            // Setup playlist variables
+            window.currentPlaylistIndex = 0;
+            window.totalVideos = results.length;
+            window.playlistResults = results;
+            
+            // Setup video event listeners
+            setupVideoEvents();
+            
+            // Auto-play the first video
+            setTimeout(() => {
+                startAutoPlay();
+            }, 500);
+        }
+
+        function setupVideoEvents() {
+            currentVideo = document.getElementById('mainVideo');
+            if (!currentVideo) return;
+            
+            currentVideo.addEventListener('ended', function() {
+                // Check if this is a playlist (multiple videos)
+                if (window.totalVideos && window.totalVideos > 1) {
+                    // Auto-advance to next video in playlist
+                    if (window.currentPlaylistIndex < window.totalVideos - 1) {
+                        nextVideo();
+                    } else {
+                        // Finished all videos in playlist
+                        isPlaying = false;
+                        updatePlayButton();
+                        showPlaylistComplete();
+                    }
+                } else {
+                    // Single video - just stop
+                    isPlaying = false;
+                    updatePlayButton();
+                }
+            });
+            
+            currentVideo.addEventListener('play', function() {
+                isPlaying = true;
+                updatePlayButton();
+                updateVideoStatus('Playing');
+            });
+            
+            currentVideo.addEventListener('pause', function() {
+                isPlaying = false;
+                updatePlayButton();
+                updateVideoStatus('Paused');
+            });
+        }
+
+        function startAutoPlay() {
+            if (currentVideo) {
+                currentVideo.play();
+            }
+        }
+
+        function togglePlay() {
+            if (!currentVideo) return;
+            
+            if (isPlaying) {
+                currentVideo.pause();
+            } else {
+                if (loopCount >= maxLoops) {
+                    // Reset and start over
+                    loopCount = 0;
+                    document.getElementById('loopCount').textContent = '0';
+                    currentVideo.currentTime = 0;
+                }
+                currentVideo.play();
+            }
+        }
+
+        function updatePlayButton() {
+            const playButton = document.getElementById('playButton');
+            if (!playButton) return;
+            
+            const icon = playButton.querySelector('i');
+            if (isPlaying) {
+                icon.className = 'fas fa-pause';
+            } else {
+                icon.className = 'fas fa-play';
+            }
+        }
+        
+        function updateVideoStatus(status) {
+            const videoStatusSpan = document.getElementById('videoStatus');
+            if (videoStatusSpan) {
+                videoStatusSpan.textContent = status;
+            }
+        }
+        
+        // Playlist navigation functions
+        function nextVideo() {
+            if (window.currentPlaylistIndex < window.totalVideos - 1) {
+                // Hide current video
+                const currentItem = document.querySelector(`[data-index="${window.currentPlaylistIndex}"]`);
+                if (currentItem) currentItem.style.display = 'none';
+                
+                // Show next video
+                window.currentPlaylistIndex++;
+                const nextItem = document.querySelector(`[data-index="${window.currentPlaylistIndex}"]`);
+                if (nextItem) nextItem.style.display = 'block';
+                
+                // Update navigation buttons
+                updatePlaylistNavigation();
+                
+                // Setup video events for new video
+                setupVideoEvents();
+                
+                // Auto-play the new video
+                setTimeout(() => {
+                    startAutoPlay();
+                }, 300);
+            }
+        }
+        
+        function previousVideo() {
+            if (window.currentPlaylistIndex > 0) {
+                // Hide current video
+                const currentItem = document.querySelector(`[data-index="${window.currentPlaylistIndex}"]`);
+                if (currentItem) currentItem.style.display = 'none';
+                
+                // Show previous video
+                window.currentPlaylistIndex--;
+                const prevItem = document.querySelector(`[data-index="${window.currentPlaylistIndex}"]`);
+                if (prevItem) prevItem.style.display = 'block';
+                
+                // Update navigation buttons
+                updatePlaylistNavigation();
+                
+                // Setup video events for new video
+                setupVideoEvents();
+                
+                // Auto-play the new video
+                setTimeout(() => {
+                    startAutoPlay();
+                }, 300);
+            }
+        }
+        
+        function updatePlaylistNavigation() {
+            const currentVideoSpan = document.getElementById('currentVideo');
+            if (currentVideoSpan) currentVideoSpan.textContent = window.currentPlaylistIndex + 1;
+        }
+        
+        function showPlaylistComplete() {
+            const playlistInfo = document.querySelector('.playlist-info');
+            if (playlistInfo) {
+                playlistInfo.innerHTML = `
+                    <i class="fas fa-check-circle text-success"></i> 
+                    <strong>Playlist Complete!</strong> 
+                    All ${window.totalVideos} videos have been played. The complete conversation has been shown in sign language.
+                `;
+                playlistInfo.className = 'playlist-info mb-3 text-success';
+            }
+        }
+        
+        // Speech Recognition Functions
+        function initializeSpeechRecognition() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                showSpeechStatus('Speech recognition not supported in this browser', 'error');
+                return false;
+            }
+            
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+            
+            recognition.onstart = function() {
+                isListening = true;
+                showSpeechStatus('Listening... Speak now', 'listening');
+                updateMicButton(true);
+            };
+            
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('queryInput').value = transcript;
+                showSpeechStatus('Speech recognized: "' + transcript + '"', 'success');
+                updateMicButton(false);
+                
+                // Auto-search after speech recognition
+                setTimeout(() => {
+                    searchVideos();
+                }, 500);
+            };
+            
+            recognition.onerror = function(event) {
+                let errorMessage = 'Speech recognition error: ';
+                switch(event.error) {
+                    case 'no-speech':
+                        errorMessage += 'No speech detected';
+                        break;
+                    case 'audio-capture':
+                        errorMessage += 'No microphone found';
+                        break;
+                    case 'not-allowed':
+                        errorMessage += 'Microphone permission denied';
+                        break;
+                    default:
+                        errorMessage += event.error;
+                }
+                showSpeechStatus(errorMessage, 'error');
+                updateMicButton(false);
+                isListening = false;
+            };
+            
+            recognition.onend = function() {
+                isListening = false;
+                updateMicButton(false);
+                if (document.getElementById('queryInput').value === '') {
+                    showSpeechStatus('No speech detected. Try again.', 'error');
+                }
+            };
+            
+            return true;
+        }
+        
+        function toggleSpeechRecognition() {
+            if (!recognition) {
+                if (!initializeSpeechRecognition()) {
+                    return;
+                }
+            }
+            
+            if (isListening) {
+                recognition.stop();
+            } else {
+                recognition.start();
+            }
+        }
+        
+        function showSpeechStatus(message, type) {
+            const statusDiv = document.getElementById('speechStatus');
+            const statusText = document.getElementById('speechStatusText');
+            
+            statusDiv.style.display = 'block';
+            statusDiv.className = 'speech-status ' + type;
+            statusText.textContent = message;
+            
+            // Hide status after 3 seconds for success messages
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 3000);
+            }
+        }
+        
+        function updateMicButton(listening) {
+            const micButton = document.getElementById('micButton');
+            const icon = micButton.querySelector('i');
+            
+            if (listening) {
+                micButton.classList.add('listening');
+                icon.className = 'fas fa-stop';
+                micButton.innerHTML = '<i class="fas fa-stop"></i> Stop';
+            } else {
+                micButton.classList.remove('listening');
+                icon.className = 'fas fa-microphone';
+                micButton.innerHTML = '<i class="fas fa-microphone"></i> Voice';
+            }
+        }
+        
+        // Auto-focus on the search input
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('queryInput').focus();
+            
+            // Initialize speech recognition on page load
+            initializeSpeechRecognition();
+        });
+    </script>
+</body>
+</html>
+
