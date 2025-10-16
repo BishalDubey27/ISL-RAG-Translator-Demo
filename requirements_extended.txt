@@ -1,0 +1,13 @@
+# Existing requirements
+sentence-transformers
+faiss-cpu
+numpy
+
+# Additional requirements for OCR and video processing
+opencv-python
+pytesseract
+Pillow
+pathlib
+
+# Optional: For better OCR preprocessing
+scikit-image
