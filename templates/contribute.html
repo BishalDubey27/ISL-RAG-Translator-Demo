@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contribute ISL Video - ISL RAG Translator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .video-preview {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 12px;
+        }
+        #recordBtn.recording {
+            background-color: #ef4444;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+    </style>
+</head>
+<body class="p-6">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-white mb-2">📹 Contribute ISL Video</h1>
+            <p class="text-white/80">Help expand the ISL knowledge base by contributing sign language videos</p>
+            <div class="mt-4">
+                <a href="/" class="glass-effect px-6 py-2 rounded-full text-white hover:bg-white/20 transition inline-block">
+                    ← Back to Home
+                </a>
+            </div>
+        </div>
+
+        <!-- Main Form -->
+        <div class="glass-effect rounded-2xl p-8 mb-6">
+            <form id="contributeForm">
+                <!-- Phrase Input -->
+                <div class="mb-6">
+                    <label class="block text-white font-semibold mb-2">
+                        Sign Phrase *
+                    </label>
+                    <input 
+                        type="text" 
+                        id="phrase" 
+                        name="phrase"
+                        placeholder="e.g., good morning, thank you, help"
+                        class="w-full px-4 py-3 rounded-lg border-2 border-white/30 bg-white/10 text-white placeholder-white/50 focus:border-white focus:outline-none"
+                        required
+                    >
+                    <p class="text-white/60 text-sm mt-1">Enter the phrase this sign represents</p>
+                </div>
+
+                <!-- Description -->
+                <div class="mb-6">
+                    <label class="block text-white font-semibold mb-2">
+                        Description (Optional)
+                    </label>
+                    <textarea 
+                        id="description" 
+                        name="description"
+                        rows="3"
+                        placeholder="Additional context or notes about this sign..."
+                        class="w-full px-4 py-3 rounded-lg border-2 border-white/30 bg-white/10 text-white placeholder-white/50 focus:border-white focus:outline-none"
+                    ></textarea>
+                </div>
+
+                <!-- Contributor Name -->
+                <div class="mb-6">
+                    <label class="block text-white font-semibold mb-2">
+                        Your Name (Optional)
+                    </label>
+                    <input 
+                        type="text" 
+                        id="contributor_name" 
+                        name="contributor_name"
+                        placeholder="Your name or leave blank for Anonymous"
+                        class="w-full px-4 py-3 rounded-lg border-2 border-white/30 bg-white/10 text-white placeholder-white/50 focus:border-white focus:outline-none"
+                    >
+                </div>
+
+                <!-- Video Recording/Upload Section -->
+                <div class="mb-6">
+                    <label class="block text-white font-semibold mb-2">
+                        Sign Video *
+                    </label>
+                    
+                    <!-- Recording Controls -->
+                    <div class="flex gap-4 mb-4">
+                        <button 
+                            type="button" 
+                            id="recordBtn"
+                            class="flex-1 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition"
+                        >
+                            🎥 Record Video
+                        </button>
+                        <button 
+                            type="button" 
+                            id="uploadBtn"
+                            class="flex-1 px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold transition"
+                        >
+                            📁 Upload Video
+                        </button>
+                    </div>
+
+                    <!-- Hidden file input -->
+                    <input 
+                        type="file" 
+                        id="videoFile" 
+                        name="video"
+                        accept="video/mp4,video/avi,video/mov,video/webm"
+                        class="hidden"
+                    >
+
+                    <!-- Video Preview -->
+                    <div id="videoPreviewContainer" class="hidden">
+                        <video id="videoPreview" class="video-preview mx-auto" controls></video>
+                        <div class="text-center mt-2">
+                            <button 
+                                type="button" 
+                                id="clearVideoBtn"
+                                class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm"
+                            >
+                                ✕ Clear Video
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Camera Preview (for recording) -->
+                    <div id="cameraContainer" class="hidden">
+                        <video id="cameraPreview" class="video-preview mx-auto" autoplay muted></video>
+                        <div class="text-center mt-2">
+                            <button 
+                                type="button" 
+                                id="stopRecordBtn"
+                                class="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold"
+                            >
+                                ⏹️ Stop Recording
+                            </button>
+                        </div>
+                    </div>
+
+                    <p class="text-white/60 text-sm mt-2">
+                        Record or upload a clear video demonstrating the sign (MP4, AVI, MOV, WEBM)
+                    </p>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="text-center">
+                    <button 
+                        type="submit" 
+                        id="submitBtn"
+                        class="px-8 py-4 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white rounded-lg font-bold text-lg transition shadow-lg"
+                    >
+                        🚀 Submit Contribution
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Status Message -->
+        <div id="statusMessage" class="hidden glass-effect rounded-lg p-4 text-center">
+            <p id="statusText" class="text-white font-semibold"></p>
+        </div>
+    </div>
+
+    <script>
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let stream = null;
+        let videoBlob = null;
+
+        const recordBtn = document.getElementById('recordBtn');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const videoFile = document.getElementById('videoFile');
+        const videoPreview = document.getElementById('videoPreview');
+        const videoPreviewContainer = document.getElementById('videoPreviewContainer');
+        const cameraPreview = document.getElementById('cameraPreview');
+        const cameraContainer = document.getElementById('cameraContainer');
+        const stopRecordBtn = document.getElementById('stopRecordBtn');
+        const clearVideoBtn = document.getElementById('clearVideoBtn');
+        const contributeForm = document.getElementById('contributeForm');
+        const statusMessage = document.getElementById('statusMessage');
+        const statusText = document.getElementById('statusText');
+
+        // Upload button click
+        uploadBtn.addEventListener('click', () => {
+            videoFile.click();
+        });
+
+        // File selected
+        videoFile.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                videoBlob = file;
+                const url = URL.createObjectURL(file);
+                videoPreview.src = url;
+                videoPreviewContainer.classList.remove('hidden');
+                cameraContainer.classList.add('hidden');
+            }
+        });
+
+        // Record button click
+        recordBtn.addEventListener('click', async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: true, 
+                    audio: false 
+                });
+                
+                cameraPreview.srcObject = stream;
+                cameraContainer.classList.remove('hidden');
+                videoPreviewContainer.classList.add('hidden');
+                
+                recordedChunks = [];
+                mediaRecorder = new MediaRecorder(stream);
+                
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) {
+                        recordedChunks.push(e.data);
+                    }
+                };
+                
+                mediaRecorder.onstop = () => {
+                    videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
+                    const url = URL.createObjectURL(videoBlob);
+                    videoPreview.src = url;
+                    videoPreviewContainer.classList.remove('hidden');
+                    cameraContainer.classList.add('hidden');
+                    
+                    // Stop camera
+                    if (stream) {
+                        stream.getTracks().forEach(track => track.stop());
+                    }
+                };
+                
+                mediaRecorder.start();
+                recordBtn.classList.add('recording');
+                recordBtn.textContent = '🔴 Recording...';
+                
+            } catch (error) {
+                alert('Camera access denied or not available: ' + error.message);
+            }
+        });
+
+        // Stop recording
+        stopRecordBtn.addEventListener('click', () => {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                recordBtn.classList.remove('recording');
+                recordBtn.textContent = '🎥 Record Video';
+            }
+        });
+
+        // Clear video
+        clearVideoBtn.addEventListener('click', () => {
+            videoBlob = null;
+            videoPreview.src = '';
+            videoPreviewContainer.classList.add('hidden');
+            videoFile.value = '';
+        });
+
+        // Form submission
+        contributeForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!videoBlob) {
+                showStatus('Please record or upload a video', 'error');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('phrase', document.getElementById('phrase').value);
+            formData.append('description', document.getElementById('description').value);
+            formData.append('contributor_name', document.getElementById('contributor_name').value || 'Anonymous');
+            formData.append('video', videoBlob, 'contribution.mp4');
+            
+            showStatus('Uploading...', 'info');
+            
+            try {
+                const response = await fetch('/api/contribute-video', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showStatus('✅ ' + result.message + ' Thank you for your contribution!', 'success');
+                    
+                    // Reset form after 2 seconds
+                    setTimeout(() => {
+                        contributeForm.reset();
+                        videoBlob = null;
+                        videoPreview.src = '';
+                        videoPreviewContainer.classList.add('hidden');
+                        statusMessage.classList.add('hidden');
+                    }, 3000);
+                } else {
+                    showStatus('❌ ' + (result.error || 'Upload failed'), 'error');
+                }
+            } catch (error) {
+                showStatus('❌ Upload failed: ' + error.message, 'error');
+            }
+        });
+
+        function showStatus(message, type) {
+            statusText.textContent = message;
+            statusMessage.classList.remove('hidden');
+            
+            if (type === 'success') {
+                statusMessage.style.backgroundColor = 'rgba(34, 197, 94, 0.2)';
+            } else if (type === 'error') {
+                statusMessage.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+            } else {
+                statusMessage.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
+            }
+        }
+    </script>
+</body>
+</html>

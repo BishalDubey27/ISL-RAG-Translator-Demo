@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISL RAG Translator - AI-Powered Sign Language Translation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .video-container {
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 12px;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #video-player {
+            max-width: 100%;
+            max-height: 500px;
+            border-radius: 8px;
+        }
+        
+        .search-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .example-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .example-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        .voice-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        }
+        
+        .voice-btn.listening {
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="min-h-screen p-4">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl md:text-6xl font-bold text-white mb-4">
+                🎯 ISL RAG Translator
+            </h1>
+            <p class="text-xl text-white opacity-90 mb-6">
+                AI-Powered Indian Sign Language Translation System
+            </p>
+            
+            <!-- Navigation -->
+            <div class="flex flex-wrap justify-center gap-4 mb-6">
+                <div class="glass-effect px-6 py-3 rounded-full">
+                    <span class="text-white font-semibold">📝 Text to Sign</span>
+                    <span class="text-white/70 ml-2">(Current)</span>
+                </div>
+                <a href="/sign-recognition" class="glass-effect px-6 py-3 rounded-full text-white hover:bg-white/20 transition">
+                    📤 Upload Video
+                </a>
+                <a href="/live-sign-recognition" class="glass-effect px-6 py-3 rounded-full text-white hover:bg-white/20 transition">
+                    📹 Live Camera
+                </a>
+                <a href="/contribute" class="glass-effect px-6 py-3 rounded-full text-white hover:bg-white/20 transition">
+                    ➕ Contribute Video
+                </a>
+            </div>
+            
+            <!-- Features -->
+            <div class="flex flex-wrap justify-center gap-4">
+                <span class="glass-effect px-4 py-2 rounded-full text-white text-sm">
+                    🎥 213+ ISL Videos
+                </span>
+                <span class="glass-effect px-4 py-2 rounded-full text-white text-sm">
+                    🔊 TTS Audio
+                </span>
+                <span class="glass-effect px-4 py-2 rounded-full text-white text-sm">
+                    🎤 Voice Input
+                </span>
+                <span class="glass-effect px-4 py-2 rounded-full text-white text-sm">
+                    🧠 AI Search
+                </span>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Video Player (Left/Top) -->
+            <div class="lg:col-span-2">
+                <div class="video-container p-6">
+                    <div id="video-area" class="w-full h-full flex flex-col items-center justify-center">
+                        <div id="welcome-message" class="text-center text-white">
+                            <div class="text-6xl mb-4">🎥</div>
+                            <h2 class="text-2xl font-bold mb-2">Welcome to ISL RAG Translator</h2>
+                            <p class="text-lg opacity-80 mb-4">Search for any phrase to see ISL video demonstration</p>
+                            <div class="text-sm opacity-60">
+                                Try: "hello", "how are you", "thank you", or use voice input
+                            </div>
+                        </div>
+                        
+                        <video id="video-player" controls muted style="display: none;" preload="metadata">
+                            Your browser does not support the video tag.
+                        </video>
+                        
+                        <audio id="audio-player" style="display: none;" preload="metadata">
+                            Your browser does not support the audio tag.
+                        </audio>
+                        
+                        <div id="loading" class="loader" style="display: none;"></div>
+                        
+                        <div id="no-results" style="display: none;" class="text-center text-white">
+                            <div class="text-4xl mb-4">🔍</div>
+                            <h3 class="text-xl font-bold mb-2">No videos found</h3>
+                            <p class="opacity-80">Try a different search term or check spelling</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Video Info -->
+                <div id="video-info" class="mt-4 glass-effect rounded-lg p-4" style="display: none;">
+                    <div class="flex items-center justify-between text-white">
+                        <div>
+                            <h3 id="current-phrase" class="text-lg font-bold"></h3>
+                            <p id="video-status" class="text-sm opacity-80"></p>
+                            <p id="audio-status" class="text-xs opacity-60 mt-1" style="display: none;"></p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button id="play-audio-btn" class="px-4 py-2 bg-green-500 hover:bg-green-600 rounded-lg text-white text-sm transition">
+                                🔊 Play All Audio
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Panel (Right/Bottom) -->
+            <div class="lg:col-span-1">
+                <div class="search-container p-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">
+                        🔍 Search ISL Videos
+                    </h2>
+                    
+                    <!-- Search Input -->
+                    <div class="mb-6">
+                        <div class="relative">
+                            <input 
+                                type="text" 
+                                id="search-input" 
+                                placeholder="Type your message here..."
+                                class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-lg"
+                            >
+                            <button 
+                                id="voice-btn" 
+                                class="voice-btn absolute right-2 top-2 p-2 text-white rounded-lg hover:opacity-90 transition"
+                                title="Voice Input"
+                            >
+                                🎤
+                            </button>
+                        </div>
+                        <button 
+                            id="search-btn" 
+                            class="w-full mt-3 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition"
+                        >
+                            🔍 Search Videos
+                        </button>
+                    </div>
+                    
+                    <!-- Quick Examples -->
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-gray-700 mb-3">Quick Examples:</h3>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button class="example-btn px-3 py-2 text-white rounded-lg text-sm font-medium" data-query="hello">
+                                👋 Hello
+                            </button>
+                            <button class="example-btn px-3 py-2 text-white rounded-lg text-sm font-medium" data-query="how are you">
+                                😊 How are you?
+                            </button>
+                            <button class="example-btn px-3 py-2 text-white rounded-lg text-sm font-medium" data-query="thank you">
+                                🙏 Thank you
+                            </button>
+                            <button class="example-btn px-3 py-2 text-white rounded-lg text-sm font-medium" data-query="good morning">
+                                🌅 Good morning
+                            </button>
+                            <button class="example-btn px-3 py-2 text-white rounded-lg text-sm font-medium" data-query="my name is">
+                                👤 My name is
+                            </button>
+                            <button class="example-btn px-3 py-2 text-white rounded-lg text-sm font-medium" data-query="help">
+                                🆘 Help
+                            </button>
+                            <button class="example-btn px-3 py-2 text-white rounded-lg text-sm font-medium" data-query="water">
+                                💧 Water
+                            </button>
+                            <button class="example-btn px-3 py-2 text-white rounded-lg text-sm font-medium" data-query="food">
+                                🍽️ Food
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Search Results -->
+                    <div id="search-results" class="mb-4" style="display: none;">
+                        <h3 class="text-lg font-semibold text-gray-700 mb-3">Search Results:</h3>
+                        <div id="results-list" class="space-y-2 max-h-60 overflow-y-auto">
+                            <!-- Results will be populated here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Features -->
+                    <div class="text-center text-sm text-gray-600">
+                        <p class="mb-2">✨ Features:</p>
+                        <div class="flex flex-wrap justify-center gap-2 text-xs">
+                            <span class="bg-gray-100 px-2 py-1 rounded">AI Search</span>
+                            <span class="bg-gray-100 px-2 py-1 rounded">Voice Input</span>
+                            <span class="bg-gray-100 px-2 py-1 rounded">TTS Audio</span>
+                            <span class="bg-gray-100 px-2 py-1 rounded">213+ Videos</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentPlaylist = [];
+        let currentVideoIndex = 0;
+        let isListening = false;
+        let recognition = null;
+
+        // DOM elements
+        const searchInput = document.getElementById('search-input');
+        const searchBtn = document.getElementById('search-btn');
+        const voiceBtn = document.getElementById('voice-btn');
+        const videoPlayer = document.getElementById('video-player');
+        const audioPlayer = document.getElementById('audio-player');
+        const welcomeMessage = document.getElementById('welcome-message');
+        const loading = document.getElementById('loading');
+        const noResults = document.getElementById('no-results');
+        const videoInfo = document.getElementById('video-info');
+        const currentPhrase = document.getElementById('current-phrase');
+        const videoStatus = document.getElementById('video-status');
+        const audioStatus = document.getElementById('audio-status');
+        const playAudioBtn = document.getElementById('play-audio-btn');
+        const searchResults = document.getElementById('search-results');
+        const resultsList = document.getElementById('results-list');
+
+        // Ensure video is always muted (only play generated audio)
+        videoPlayer.volume = 0;
+        videoPlayer.muted = true;
+
+        // Initialize speech recognition
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = function() {
+                isListening = true;
+                voiceBtn.classList.add('listening');
+                voiceBtn.innerHTML = '🎙️';
+            };
+
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                searchInput.value = transcript;
+                performSearch(transcript);
+            };
+
+            recognition.onend = function() {
+                isListening = false;
+                voiceBtn.classList.remove('listening');
+                voiceBtn.innerHTML = '🎤';
+            };
+
+            recognition.onerror = function(event) {
+                console.error('Speech recognition error:', event.error);
+                isListening = false;
+                voiceBtn.classList.remove('listening');
+                voiceBtn.innerHTML = '🎤';
+            };
+        } else {
+            voiceBtn.style.display = 'none';
+        }
+
+        // Event listeners
+        searchBtn.addEventListener('click', () => {
+            const query = searchInput.value.trim();
+            if (query) {
+                performSearch(query);
+            }
+        });
+
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const query = searchInput.value.trim();
+                if (query) {
+                    performSearch(query);
+                }
+            }
+        });
+
+        voiceBtn.addEventListener('click', () => {
+            if (recognition) {
+                if (isListening) {
+                    recognition.stop();
+                } else {
+                    recognition.start();
+                }
+            }
+        });
+
+        playAudioBtn.addEventListener('click', () => {
+            // Play all audio files in sequence
+            if (currentPlaylist.length > 0) {
+                playAllAudio();
+            }
+        });
+
+        // Example buttons
+        document.querySelectorAll('.example-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const query = btn.getAttribute('data-query');
+                searchInput.value = query;
+                performSearch(query);
+            });
+        });
+
+        // Video player events
+        videoPlayer.addEventListener('ended', () => {
+            playNextVideo();
+        });
+
+        // Search function
+        async function performSearch(query) {
+            showLoading();
+            
+            try {
+                const response = await fetch('/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: query })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.playlist && data.playlist.length > 0) {
+                    currentPlaylist = data.playlist;
+                    currentVideoIndex = 0;
+                    displaySearchResults(data.playlist);
+                    playVideo(currentPlaylist[0]);
+                } else {
+                    showNoResults();
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                showNoResults();
+            }
+        }
+
+        // Display functions
+        function showLoading() {
+            hideAllDisplays();
+            loading.style.display = 'block';
+        }
+
+        function showNoResults() {
+            hideAllDisplays();
+            noResults.style.display = 'block';
+            searchResults.style.display = 'none';
+        }
+
+        function hideAllDisplays() {
+            welcomeMessage.style.display = 'none';
+            videoPlayer.style.display = 'none';
+            loading.style.display = 'none';
+            noResults.style.display = 'none';
+            videoInfo.style.display = 'none';
+        }
+
+        function displaySearchResults(playlist) {
+            resultsList.innerHTML = '';
+            playlist.forEach((video, index) => {
+                const resultItem = document.createElement('div');
+                resultItem.className = 'p-2 bg-gray-100 rounded cursor-pointer hover:bg-gray-200 transition';
+                resultItem.innerHTML = `
+                    <div class="font-medium">${video.text}</div>
+                    <div class="text-xs text-gray-600">${video.match_type || 'exact'} match</div>
+                `;
+                resultItem.addEventListener('click', () => {
+                    currentVideoIndex = index;
+                    playVideo(video);
+                });
+                resultsList.appendChild(resultItem);
+            });
+            searchResults.style.display = 'block';
+        }
+
+        function playVideo(video) {
+            hideAllDisplays();
+            
+            videoPlayer.src = `/videos/${video.file}`;
+            videoPlayer.style.display = 'block';
+            videoInfo.style.display = 'block';
+            
+            currentPhrase.textContent = video.text;
+            videoStatus.textContent = `Video ${currentVideoIndex + 1} of ${currentPlaylist.length}`;
+            
+            // Mute video and play
+            videoPlayer.muted = true;
+            videoPlayer.play().catch(e => console.log('Video autoplay prevented'));
+            
+            // Play audio for this video
+            if (video.audio_url) {
+                setTimeout(() => {
+                    audioPlayer.src = video.audio_url;
+                    audioPlayer.play().catch(e => console.log('Audio autoplay prevented:', e));
+                }, 500);
+            }
+        }
+
+        function playNextVideo() {
+            if (currentVideoIndex < currentPlaylist.length - 1) {
+                currentVideoIndex++;
+                playVideo(currentPlaylist[currentVideoIndex]);
+            }
+        }
+
+        // Play all audio files sequentially
+        function playAllAudio() {
+            if (currentPlaylist.length === 0) {
+                return;
+            }
+
+            let audioIndex = 0;
+            
+            function playNextAudio() {
+                if (audioIndex >= currentPlaylist.length) {
+                    audioStatus.style.display = 'none';
+                    return;
+                }
+
+                const video = currentPlaylist[audioIndex];
+                if (video.audio_url) {
+                    // Show audio status
+                    audioStatus.style.display = 'block';
+                    audioStatus.textContent = `🔊 Playing audio ${audioIndex + 1}/${currentPlaylist.length}: "${video.text}"`;
+                    
+                    audioPlayer.src = video.audio_url;
+                    
+                    // When current audio ends, play next
+                    audioPlayer.onended = () => {
+                        audioIndex++;
+                        playNextAudio();
+                    };
+                    
+                    audioPlayer.play().catch(e => {
+                        console.log('Audio playback error:', e);
+                        audioIndex++;
+                        playNextAudio();
+                    });
+                } else {
+                    audioIndex++;
+                    playNextAudio();
+                }
+            }
+
+            playNextAudio();
+        }
+
+        // Initialize
+        console.log('🎯 ISL RAG Translator initialized');
+    </script>
+</body>
+</html>

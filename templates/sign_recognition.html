@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign to Speech - ISL Translator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        .upload-area:hover {
+            border-color: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .upload-area.dragover {
+            border-color: #4ade80;
+            background: rgba(74, 222, 128, 0.1);
+        }
+        #video-preview {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 12px;
+        }
+        .result-card {
+            animation: slideIn 0.5s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #4ade80;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .confidence-bar {
+            transition: width 0.5s ease;
+        }
+    </style>
+</head>
+<body class="p-6">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="glass rounded-2xl p-6 mb-6 text-white">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold mb-2">🎥 Sign to Speech Translation</h1>
+                    <p class="text-white/80">Upload a sign language video to get text and audio translation</p>
+                </div>
+                <div class="mt-4 md:mt-0 flex gap-3">
+                    <a href="/" class="px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30 transition">
+                        ← Text to Sign
+                    </a>
+                    <a href="/live-sign-recognition" class="px-4 py-2 bg-green-500/80 rounded-lg hover:bg-green-500 transition">
+                        📹 Live Camera
+                    </a>
+                    <button id="demo-btn" class="px-4 py-2 bg-blue-500/80 rounded-lg hover:bg-blue-500 transition">
+                        🎭 Try Demo
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Controls Section -->
+            <div>
+                <div class="glass rounded-2xl p-6">
+                    <h2 class="text-2xl font-bold text-white mb-4">📤 Upload Sign Video</h2>
+                    <div id="upload-area" class="upload-area rounded-xl p-8 text-center mb-4">
+                        <div id="upload-content">
+                            <div class="text-6xl mb-4">🎬</div>
+                            <h3 class="text-xl font-semibold text-white mb-2">Drop your video here</h3>
+                            <p class="text-white/70 mb-4">or click to browse files</p>
+                            <button id="browse-btn" class="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition">
+                                📁 Browse Files
+                            </button>
+                            <input type="file" id="video-input" accept="video/*" class="hidden">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video Preview Section -->
+            <div>
+                <div class="glass rounded-2xl p-6">
+                    <h2 class="text-2xl font-bold text-white mb-4">📹 Video Preview</h2>
+                    <video id="video-preview" controls class="w-full rounded-lg bg-black">
+                        Your browser does not support video playback.
+                    </video>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="glass rounded-2xl p-6">
+            <h2 class="text-2xl font-bold text-white mb-4">🎯 Recognition Results</h2>
+            
+            <!-- Welcome Message -->
+            <div id="welcome-results" class="text-center text-white/70 py-12">
+                <div class="text-6xl mb-4">🤖</div>
+                <h3 class="text-xl font-semibold mb-2">Ready for Sign Recognition</h3>
+                <p>Upload a sign language video to see AI-powered recognition results</p>
+            </div>
+
+            <!-- Results Display -->
+            <div id="results-container" class="hidden">
+                <!-- Recognition Result -->
+                <div id="recognition-result" class="result-card glass rounded-lg p-6 mb-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-white">🎯 Recognized Sign</h3>
+                        <span id="demo-badge" class="hidden px-2 py-1 bg-blue-500/80 text-white text-xs rounded-full">DEMO</span>
+                    </div>
+                    
+                    <div class="text-center mb-4">
+                        <div id="recognized-text" class="text-3xl font-bold text-white mb-2">-</div>
+                        <div class="text-sm text-white/70">
+                            Confidence: <span id="confidence-value">0%</span>
+                        </div>
+                        <div class="w-full bg-white/20 rounded-full h-2 mt-2">
+                            <div id="confidence-bar" class="confidence-bar bg-green-500 h-2 rounded-full" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button id="play-audio-btn" class="flex-1 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold transition disabled:opacity-50" disabled>
+                            🔊 Play Audio
+                        </button>
+                        <button id="copy-text-btn" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition">
+                            📋 Copy Text
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Additional Info -->
+                <div class="glass rounded-lg p-4">
+                    <h4 class="font-semibold text-white mb-2">ℹ️ Recognition Details</h4>
+                    <div id="recognition-details" class="text-sm text-white/70 space-y-1">
+                        <div>Processing time: <span id="processing-time">-</span></div>
+                        <div>Model used: <span id="model-info">MediaPipe + LSTM</span></div>
+                        <div>Status: <span id="recognition-status">Ready</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Display -->
+            <div id="error-container" class="hidden">
+                <div class="bg-red-500/20 border border-red-500/50 rounded-lg p-4 text-center">
+                    <div class="text-4xl mb-2">⚠️</div>
+                    <h3 class="text-lg font-semibold text-white mb-2">Recognition Failed</h3>
+                    <p id="error-message" class="text-white/80 text-sm mb-4">An error occurred during processing</p>
+                    <button id="retry-btn" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition">
+                        🔄 Try Again
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="glass rounded-2xl p-6 mt-6">
+            <h2 class="text-2xl font-bold text-white mb-4">📋 How to Use</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-white/80">
+                <div class="text-center">
+                    <div class="text-3xl mb-2">1️⃣</div>
+                    <h3 class="font-semibold mb-1">Upload Video</h3>
+                    <p class="text-sm">Record or upload a clear sign language video</p>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl mb-2">2️⃣</div>
+                    <h3 class="font-semibold mb-1">AI Analysis</h3>
+                    <p class="text-sm">Our AI model analyzes the sign movements</p>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl mb-2">3️⃣</div>
+                    <h3 class="font-semibold mb-1">Get Results</h3>
+                    <p class="text-sm">Receive text translation and audio output</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Audio Player -->
+    <audio id="audio-player" style="display: none;"></audio>
+
+    <script>
+        // Global variables
+        let currentVideoFile = null;
+        let recognitionResult = null;
+
+        // DOM elements
+        const uploadArea = document.getElementById('upload-area');
+        const uploadContent = document.getElementById('upload-content');
+        const uploadLoading = document.getElementById('upload-loading');
+        const browseBtn = document.getElementById('browse-btn');
+        const videoInput = document.getElementById('video-input');
+        const videoPreviewContainer = document.getElementById('video-preview-container');
+        const videoPreview = document.getElementById('video-preview');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const demoBtn = document.getElementById('demo-btn');
+        
+        const welcomeResults = document.getElementById('welcome-results');
+        const resultsContainer = document.getElementById('results-container');
+        const errorContainer = document.getElementById('error-container');
+        const recognizedText = document.getElementById('recognized-text');
+        const confidenceValue = document.getElementById('confidence-value');
+        const confidenceBar = document.getElementById('confidence-bar');
+        const playAudioBtn = document.getElementById('play-audio-btn');
+        const copyTextBtn = document.getElementById('copy-text-btn');
+        const demoBadge = document.getElementById('demo-badge');
+        const audioPlayer = document.getElementById('audio-player');
+
+        // System status elements
+        const modelStatus = document.getElementById('model-status');
+        const availableSigns = document.getElementById('available-signs');
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            checkSystemStatus();
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            // Upload area events
+            uploadArea.addEventListener('click', () => videoInput.click());
+            uploadArea.addEventListener('dragover', handleDragOver);
+            uploadArea.addEventListener('dragleave', handleDragLeave);
+            uploadArea.addEventListener('drop', handleDrop);
+            
+            // File input
+            videoInput.addEventListener('change', handleFileSelect);
+            
+            // Buttons
+            browseBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                videoInput.click();
+            });
+            analyzeBtn.addEventListener('click', analyzeVideo);
+            clearBtn.addEventListener('click', clearVideo);
+            demoBtn.addEventListener('click', runDemo);
+            playAudioBtn.addEventListener('click', playAudio);
+            copyTextBtn.addEventListener('click', copyText);
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        function handleFile(file) {
+            // Validate file type
+            const allowedTypes = ['video/mp4', 'video/avi', 'video/mov', 'video/webm'];
+            if (!allowedTypes.includes(file.type)) {
+                alert('Please upload a valid video file (MP4, AVI, MOV, WEBM)');
+                return;
+            }
+
+            // Validate file size (100MB)
+            if (file.size > 100 * 1024 * 1024) {
+                alert('File size must be less than 100MB');
+                return;
+            }
+
+            currentVideoFile = file;
+            
+            // Show video preview
+            const url = URL.createObjectURL(file);
+            videoPreview.src = url;
+            videoPreviewContainer.classList.remove('hidden');
+            
+            // Hide results
+            hideResults();
+        }
+
+        async function analyzeVideo() {
+            if (!currentVideoFile) {
+                alert('Please select a video file first');
+                return;
+            }
+
+            showLoading();
+            const startTime = Date.now();
+
+            try {
+                const formData = new FormData();
+                formData.append('video', currentVideoFile);
+
+                const response = await fetch('/upload-sign-video', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                const processingTime = ((Date.now() - startTime) / 1000).toFixed(1);
+
+                if (result.success) {
+                    displayResults(result, processingTime);
+                } else {
+                    displayError(result.error || 'Recognition failed', result.details);
+                }
+            } catch (error) {
+                console.error('Analysis error:', error);
+                displayError('Network error occurred', error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function displayResults(result, processingTime) {
+            recognitionResult = result;
+            
+            // Update UI
+            recognizedText.textContent = result.recognized_text;
+            confidenceValue.textContent = `${(result.confidence * 100).toFixed(1)}%`;
+            confidenceBar.style.width = `${result.confidence * 100}%`;
+            
+            // Show demo badge if in demo mode
+            if (result.is_demo) {
+                demoBadge.classList.remove('hidden');
+            } else {
+                demoBadge.classList.add('hidden');
+            }
+            
+            // Enable audio button if available
+            if (result.audio_url) {
+                playAudioBtn.disabled = false;
+                audioPlayer.src = result.audio_url;
+            } else {
+                playAudioBtn.disabled = true;
+            }
+            
+            // Update details
+            document.getElementById('processing-time').textContent = `${processingTime}s`;
+            document.getElementById('recognition-status').textContent = result.is_demo ? 'Demo Mode' : 'Complete';
+            
+            // Show results
+            welcomeResults.classList.add('hidden');
+            errorContainer.classList.add('hidden');
+            resultsContainer.classList.remove('hidden');
+        }
+
+        function displayError(message, details) {
+            document.getElementById('error-message').textContent = message;
+            
+            welcomeResults.classList.add('hidden');
+            resultsContainer.classList.add('hidden');
+            errorContainer.classList.remove('hidden');
+        }
+
+        function hideResults() {
+            resultsContainer.classList.add('hidden');
+            errorContainer.classList.add('hidden');
+            welcomeResults.classList.remove('hidden');
+        }
+
+        function showLoading() {
+            uploadContent.classList.add('hidden');
+            uploadLoading.classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            uploadContent.classList.remove('hidden');
+            uploadLoading.classList.add('hidden');
+        }
+
+        function clearVideo() {
+            currentVideoFile = null;
+            videoPreview.src = '';
+            videoPreviewContainer.classList.add('hidden');
+            videoInput.value = '';
+            hideResults();
+        }
+
+        function playAudio() {
+            if (audioPlayer.src) {
+                audioPlayer.play();
+            }
+        }
+
+        function copyText() {
+            if (recognitionResult && recognitionResult.recognized_text) {
+                navigator.clipboard.writeText(recognitionResult.recognized_text).then(() => {
+                    // Visual feedback
+                    const originalText = copyTextBtn.textContent;
+                    copyTextBtn.textContent = '✅ Copied!';
+                    setTimeout(() => {
+                        copyTextBtn.textContent = originalText;
+                    }, 2000);
+                });
+            }
+        }
+
+        function runDemo() {
+            // Create a demo blob (1x1 pixel video)
+            const canvas = document.createElement('canvas');
+            canvas.width = 1;
+            canvas.height = 1;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, 1, 1);
+            
+            canvas.toBlob((blob) => {
+                const demoFile = new File([blob], 'demo.webm', { type: 'video/webm' });
+                currentVideoFile = demoFile;
+                
+                // Show demo video preview
+                videoPreview.src = URL.createObjectURL(demoFile);
+                videoPreviewContainer.classList.remove('hidden');
+                
+                // Auto-analyze
+                setTimeout(() => {
+                    analyzeVideo();
+                }, 500);
+            }, 'video/webm');
+        }
+
+        async function checkSystemStatus() {
+            try {
+                const response = await fetch('/api/sign-recognition-status');
+                const status = await response.json();
+                
+                if (status.model_loaded) {
+                    modelStatus.textContent = '✅ Loaded';
+                    modelStatus.className = 'text-green-400';
+                } else {
+                    modelStatus.textContent = '⚠️ Demo Mode';
+                    modelStatus.className = 'text-yellow-400';
+                }
+                
+                availableSigns.textContent = status.available_signs.length > 0 ? 
+                    status.available_signs.join(', ') : 'Demo signs available';
+                    
+            } catch (error) {
+                modelStatus.textContent = '❌ Error';
+                modelStatus.className = 'text-red-400';
+                availableSigns.textContent = 'Status unknown';
+            }
+        }
+
+        console.log('🎥 Sign to Speech interface initialized');
+    </script>
+</body>
+</html>

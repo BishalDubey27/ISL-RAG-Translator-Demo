@@ -1,0 +1,50 @@
+# Core AI and ML Libraries
+sentence-transformers==2.7.0
+faiss-cpu==1.8.0
+numpy==1.26.4
+scikit-learn==1.5.1
+
+# Web Framework
+flask==3.0.3
+werkzeug==3.0.3
+jinja2==3.1.4
+
+# Video Processing
+moviepy==1.0.3
+opencv-python==4.10.0.84
+imageio==2.34.2
+imageio-ffmpeg==0.5.1
+Pillow==10.4.0
+
+# Audio Processing
+gtts==2.5.1
+pydub==0.25.1
+
+# File System Monitoring
+watchdog==4.0.1
+
+# HTTP Requests
+requests==2.32.3
+
+# Data Processing
+pandas==2.2.2
+
+# Development and Utilities
+python-dotenv==1.0.1
+tqdm==4.66.4
+click==8.1.7
+
+# Deep Learning Framework
+torch==2.3.1
+torchvision==0.18.1
+torchaudio==2.3.1
+
+# System utilities
+psutil==6.0.0
+
+# INCLUDE Dataset Training Requirements
+mediapipe==0.10.9
+matplotlib>=3.4.0
+seaborn>=0.11.0
+tensorboard>=2.7.0
+zipfile36>=0.1.3

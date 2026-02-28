@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Sign Recognition - ISL Translator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        #camera-feed {
+            width: 100%;
+            max-width: 600px;
+            border-radius: 12px;
+            transform: scaleX(-1);
+            background: black;
+        }
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .recording-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background: #ef4444;
+            border-radius: 50%;
+            animation: blink 1s infinite;
+            margin-right: 8px;
+        }
+        @keyframes blink {
+            0%, 49%, 100% { opacity: 1; }
+            50%, 99% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-6">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="glass rounded-2xl p-6 mb-6 text-white">
+            <h1 class="text-4xl font-bold mb-2">🎥 Live Sign Recognition</h1>
+            <p class="text-white/80">Perform a sign in front of your camera and watch the model recognize it in real-time</p>
+        </div>
+
+        <!-- Status Banner -->
+        <div id="status-banner" class="glass rounded-xl p-4 mb-6 text-white hidden">
+            <p id="status-text"></p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Camera Section -->
+            <div class="lg:col-span-2">
+                <!-- Camera Feed -->
+                <div class="glass rounded-2xl p-6 mb-6">
+                    <div id="camera-container" class="text-center">
+                        <video id="camera-feed" autoplay playsinline></video>
+                        <p class="text-white/60 text-sm mt-4">Your camera feed (mirrored)</p>
+                    </div>
+
+                    <!-- Error Message -->
+                    <div id="camera-error" class="hidden text-center mt-4">
+                        <p class="text-red-300 font-semibold mb-2">❌ Camera Access Denied</p>
+                        <p class="text-white/70 text-sm mb-4" id="error-message"></p>
+                        <button id="retry-camera" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition">
+                            Retry Camera Access
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Canvas (hidden, for frame capture) -->
+                <canvas id="frame-canvas" class="hidden"></canvas>
+
+                <!-- Controls -->
+                <div class="glass rounded-2xl p-6">
+                    <div class="flex gap-4">
+                        <button id="start-btn" class="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold rounded-lg transition disabled:opacity-50">
+                            ▶ Start Recognition
+                        </button>
+                        <button id="stop-btn" class="flex-1 px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold rounded-lg transition disabled:opacity-50" disabled>
+                            ⏹ Stop Recognition
+                        </button>
+                    </div>
+                    <p class="text-white/60 text-sm mt-4 text-center">
+                        Recognition will capture frames every 0.5 seconds
+                    </p>
+                </div>
+            </div>
+
+            <!-- Results Panel -->
+            <div class="lg:col-span-1">
+                <!-- Live Recognition Results -->
+                <div class="glass rounded-2xl p-6 h-full">
+                    <h2 class="text-xl font-bold text-white mb-4">📊 Recognition</h2>
+
+                    <!-- Current Sign -->
+                    <div class="bg-white/10 rounded-lg p-4 mb-4">
+                        <p class="text-white/70 text-xs mb-1">Current Sign</p>
+                        <p id="current-sign" class="text-2xl font-bold text-green-300">---</p>
+                        <p id="current-confidence" class="text-white/60 text-sm mt-2">Confidence: 0%</p>
+                    </div>
+
+                    <!-- Status -->
+                    <div class="bg-white/10 rounded-lg p-4 mb-4">
+                        <p class="text-white/70 text-xs mb-2">Status</p>
+                        <div id="recognition-status" class="flex items-center">
+                            <div class="recording-indicator hidden"></div>
+                            <span id="status-text-live" class="text-white">Ready</span>
+                        </div>
+                    </div>
+
+                    <!-- Frame Counter -->
+                    <div class="bg-white/10 rounded-lg p-4 mb-4">
+                        <p class="text-white/70 text-xs mb-1">Frames Processed</p>
+                        <p id="frame-count" class="text-xl font-bold text-blue-300">0</p>
+                    </div>
+
+                    <!-- Last 5 Predictions -->
+                    <div class="bg-white/10 rounded-lg p-4">
+                        <p class="text-white/70 text-xs mb-2">Recent Predictions</p>
+                        <div id="predictions-list" class="space-y-1 text-sm">
+                            <p class="text-white/50">None yet</p>
+                        </div>
+                    </div>
+
+                    <!-- Demo Mode Badge -->
+                    <div id="demo-badge" class="hidden mt-4 bg-yellow-500/20 border border-yellow-500/50 rounded-lg p-3 text-yellow-200 text-xs">
+                        ℹ️ DEMO MODE: Using dummy features. Train a model for real recognition.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="glass rounded-2xl p-6 mt-6 text-white">
+            <h3 class="text-lg font-bold mb-3">📝 How to Use</h3>
+            <ol class="space-y-2 text-white/80 text-sm">
+                <li><strong>1. Position yourself</strong> in front of the camera where you can see your entire body/hands</li>
+                <li><strong>2. Click "Start Recognition"</strong> to begin capturing frames</li>
+                <li><strong>3. Perform a sign</strong> slowly and clearly in front of the camera</li>
+                <li><strong>4. Watch the results</strong> update in the recognition panel as the model processes frames</li>
+                <li><strong>5. Click "Stop Recognition"</strong> to pause and try another sign</li>
+            </ol>
+        </div>
+
+        <!-- Footer -->
+        <div class="mt-8 text-center text-white/60 text-sm">
+            <p>Sign Language Recognition - Live Webcam Demo | ISL Translator</p>
+        </div>
+    </div>
+
+    <script>
+        const videoElement = document.getElementById('camera-feed');
+        const canvasElement = document.getElementById('frame-canvas');
+        const ctx = canvasElement.getContext('2d');
+        const startBtn = document.getElementById('start-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const currentSignEl = document.getElementById('current-sign');
+        const confidenceEl = document.getElementById('current-confidence');
+        const statusTextLive = document.getElementById('status-text-live');
+        const recordingIndicator = document.querySelector('.recording-indicator');
+        const frameCountEl = document.getElementById('frame-count');
+        const predictionsList = document.getElementById('predictions-list');
+        const demoBadge = document.getElementById('demo-badge');
+        const statusBanner = document.getElementById('status-banner');
+        const statusText = document.getElementById('status-text');
+        const cameraError = document.getElementById('camera-error');
+        const cameraContainer = document.getElementById('camera-container');
+        const errorMessage = document.getElementById('error-message');
+        const retryBtn = document.getElementById('retry-camera');
+
+        let isRecognizing = false;
+        let frameCount = 0;
+        let recognitionInterval = null;
+        let recentPredictions = [];
+
+        // Check API status
+        fetch('/api/status')
+            .then(r => r.json())
+            .then(data => {
+                if (!data.model_loaded) {
+                    statusBanner.classList.remove('hidden');
+                    statusBanner.classList.add('bg-yellow-500/20', 'border', 'border-yellow-500/50');
+                    statusText.textContent = '⚠️ Demo Mode: Running with dummy extractor. Train a model for real recognition.';
+                    demoBadge.classList.remove('hidden');
+                }
+            });
+
+        // Initialize camera
+        async function initializeCamera() {
+            try {
+                cameraError.classList.add('hidden');
+                cameraContainer.classList.remove('hidden');
+                
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+                });
+
+                videoElement.srcObject = stream;
+                startBtn.disabled = false;
+
+                // Set canvas size when video is ready
+                videoElement.onloadedmetadata = () => {
+                    canvasElement.width = videoElement.videoWidth;
+                    canvasElement.height = videoElement.videoHeight;
+                };
+            } catch (error) {
+                cameraContainer.classList.add('hidden');
+                cameraError.classList.remove('hidden');
+                errorMessage.textContent = error.message || 'Unable to access camera. Please check permissions.';
+                startBtn.disabled = true;
+                console.error('Camera error:', error);
+            }
+        }
+
+        // Capture frame and send to server
+        async function captureAndRecognize() {
+            try {
+                ctx.drawImage(videoElement, 0, 0);
+                const frameData = canvasElement.toDataURL('image/jpeg');
+
+                // Create form data with frame image
+                const formData = new FormData();
+                formData.append('frame', frameData);
+
+                const response = await fetch('/api/recognize-frame', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    console.error('Recognition error:', await response.text());
+                    return;
+                }
+
+                const result = await response.json();
+                frameCount++;
+                frameCountEl.textContent = frameCount;
+
+                if (result.recognized_sign && result.recognized_sign !== '---') {
+                    currentSignEl.textContent = result.recognized_sign;
+                    confidenceEl.textContent = `Confidence: ${(result.confidence * 100).toFixed(1)}%`;
+
+                    // Add to recent predictions
+                    recentPredictions.unshift({
+                        label: result.recognized_sign,
+                        confidence: result.confidence
+                    });
+                    
+                    if (recentPredictions.length > 5) {
+                        recentPredictions.pop();
+                    }
+
+                    updatePredictionsList();
+                }
+            } catch (error) {
+                console.error('Capture error:', error);
+            }
+        }
+
+        function updatePredictionsList() {
+            if (recentPredictions.length === 0) {
+                predictionsList.innerHTML = '<p class="text-white/50">None yet</p>';
+                return;
+            }
+
+            predictionsList.innerHTML = recentPredictions.map((pred, idx) => `
+                <div class="flex justify-between items-center text-white/80">
+                    <span>${idx + 1}. ${pred.label}</span>
+                    <span class="text-green-300 text-xs">${(pred.confidence * 100).toFixed(0)}%</span>
+                </div>
+            `).join('');
+        }
+
+        startBtn.addEventListener('click', () => {
+            isRecognizing = true;
+            frameCount = 0;
+            recentPredictions = [];
+            currentSignEl.textContent = '---';
+            confidenceEl.textContent = 'Confidence: 0%';
+            updatePredictionsList();
+
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            recordingIndicator.classList.remove('hidden');
+            statusTextLive.textContent = 'Recognizing...';
+
+            // Capture frame every 500ms
+            recognitionInterval = setInterval(captureAndRecognize, 500);
+        });
+
+        stopBtn.addEventListener('click', () => {
+            isRecognizing = false;
+            clearInterval(recognitionInterval);
+
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            recordingIndicator.classList.add('hidden');
+            statusTextLive.textContent = 'Stopped';
+        });
+
+        retryBtn.addEventListener('click', initializeCamera);
+
+        // Initialize on load
+        window.addEventListener('load', initializeCamera);
+
+        // Cleanup on unload
+        window.addEventListener('beforeunload', () => {
+            if (videoElement.srcObject) {
+                videoElement.srcObject.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
+</body>
+</html>
